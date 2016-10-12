@@ -1,0 +1,144 @@
+package test.VACATION;
+import stm.*;
+
+public class LinkedList extends TLinkedList{	
+
+
+public static STM<Reservation_Info> returnReservationInfo(Reservation_Info reser)
+{
+  return STMRTS.stmReturn(reser); 
+}
+
+	public STM<Boolean> insert(Reservation_Info obj){
+
+		return new STMDO{
+
+			Node head <- this.getHead();
+			Node node <- STMRTS.stmReturn (new Node(obj, head, null));
+			this.setHead(node);
+			Integer lsize <- this.getSize();
+
+			Integer price <- obj.getPrice();
+			Integer bill <- this.getBill();
+			this.setBill(bill+price);
+
+			this.setSize(lsize+1);
+			if(lsize.equals(0)){
+				this.setHead(node);
+				STMRTS.stmReturn(true)
+			}else{
+				node.setNext(head);
+				head.setPrevious(node);
+				STMRTS.stmReturn(true)
+			}
+		};
+	}
+
+	public STM<Reservation_Info> find(Reservation_Info obj){
+		return new STMDO{
+			Node node <- this.getHead();
+			Integer obj_id <- obj.getId();
+			Integer obj_type <- obj.getType();
+			find(node, obj_id, obj_type)
+		};
+	}
+
+	public STM<Reservation_Info> find(Node node, Integer obj_id, Integer obj_type){
+		return new STMDO{
+			if(node==null){
+				returnReservationInfo(null)
+			}else{
+				Reservation_Info reser <- node.getElement();
+				Integer node_id <- reser.getId();
+				Integer node_type <- reser.getType();
+
+				if((obj_id==node_id)&&(obj_type==node_type)){
+					returnReservationInfo(reser)
+				}else{
+					Node next <- node.getNext();
+					if(next==null){
+						returnReservationInfo(null)
+					}else{
+						Reservation_Info new_aux_reservation_info <- next.getElement();
+						find(next, obj_id, obj_type) 
+					}
+				}
+			}
+		};
+	}
+
+	public STM<Boolean> remove(Reservation_Info obj){
+			return new STMDO{
+			Node node <- this.getHead();
+			Integer obj_id <- obj.getId();
+			Integer obj_type <- obj.getType();
+			remove(node, obj_id, obj_type)
+		};
+	}
+
+	public STM<Boolean> remove(Node node, Integer obj_id, Integer obj_type) {
+
+		return new STMDO{
+			if(node==null){
+				STMRTS.stmReturn(false)
+			} 
+			else{
+				Reservation_Info reser <- node.getElement();
+				Integer node_id <- reser.getId();
+				Integer node_type <- reser.getType();
+				if((obj_id==node_id) && (obj_type==node_type)){
+					this.remove(node);
+					STMRTS.stmReturn(true)
+				}
+				else{
+					Node next <- node.getNext();
+					if(next==null){
+						STMRTS.stmReturn(false)
+					}
+					else{
+						Reservation_Info new_aux_reservation_info <- next.getElement();
+						remove(next, obj_id, obj_type)
+					}
+				}
+			}
+		};
+	}
+
+	public STM<stm.Void> remove(Node node){
+		return new STMDO{
+			Integer lsize <- this.getSize();
+			this.setSize(lsize-1);
+
+			Reservation_Info reser <- node.getElement();
+			Integer price <- reser.getPrice();
+			Integer bill <- this.getBill();
+			this.setBill(bill-price);
+
+			if(lsize==1){
+				this.setHead(null)
+			}
+			else
+			{
+				Node previous <- node.getPrevious();
+				if(previous == null){
+					Node next_aux <- node.getNext();
+					this.setHead(next_aux)
+				}
+				else{
+					Node next <- node.getNext();
+					if(next==null){
+						Node previous_aux <- node.getPrevious();
+						previous_aux.setNext(null)
+					}
+					else{
+						previous.setNext(next);
+						next.setPrevious(previous)
+					}
+				}
+			}
+		};
+	}	
+
+}
+
+

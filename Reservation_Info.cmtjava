@@ -1,0 +1,26 @@
+package test.VACATION;
+import stm.*;
+
+public class Reservation_Info extends TReservation_Info{
+
+	public Reservation_Info(Integer id, Integer type, Integer price){
+		super(id, type, price);
+	}
+
+	public static STM<Integer> reservation_info_compare(TReservation_Info aPtr, TReservation_Info bPtr){
+		
+		return new STMDO{
+			Integer aPtr_type <- aPtr.getType();
+			Integer bPtr_type <- bPtr.getType();
+			
+			if( (aPtr_type - bPtr_type) != 0 )
+				STMRTS.stmReturn(aPtr_type - bPtr_type)	
+			else{
+				Integer aPtr_id <- aPtr.getId();
+				Integer bPtr_id <- bPtr.getId();
+				STMRTS.stmReturn(aPtr_id - bPtr_id)
+			}
+		};
+	}
+}
+

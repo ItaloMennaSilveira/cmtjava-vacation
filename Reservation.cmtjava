@@ -1,0 +1,122 @@
+package test.VACATION;
+import stm.*;
+
+public class Reservation extends TReservation{
+
+	public Reservation(Integer id, Integer numTotal, Integer price){
+		super(id, numTotal, price);
+    	checkReservation();
+	}
+
+	public Reservation()
+	{
+		super();
+		checkReservation();
+	}
+
+	private STM<stm.Void> checkReservation(){
+		
+		return new STMDO{
+			Integer numUsed <- this.getNumUsed();
+			Integer numFree <- this.getNumFree();
+			Integer	numTotal <- this.getNumTotal();
+			Integer price <- this.getPrice();
+
+			this.setNumUsed(numUsed);
+			this.setNumFree(numFree);
+			this.setNumTotal(numTotal);
+			this.setPrice(price)
+		};
+	}
+
+	public STM<Boolean> reservation_addToTotal(Integer num){
+
+		return new STMDO{
+			Integer add_numFree <- this.getNumFree();
+			this.setNumFree(add_numFree+num);
+
+			Integer teste_numFree <- this.getNumFree();
+
+			if(0 > teste_numFree){
+				this.setNumFree(add_numFree);
+				STMRTS.stmReturn(false)
+			}
+			else{
+				Integer add_numTotal <- this.getNumTotal();
+				this.setNumTotal(add_numTotal + num);
+
+				checkReservation();
+				STMRTS.stmReturn(true)
+			}
+		};
+
+	} 
+
+	public STM<Boolean> reservation_make(){
+
+		return new STMDO{
+			Integer aux_numFree <- this.getNumFree();
+
+			if(1 > aux_numFree){
+				STMRTS.stmReturn(false)
+			}
+			else{
+				Integer add_numUsed <- this.getNumUsed();
+				this.setNumUsed(add_numUsed+1);
+				this.setNumFree(aux_numFree-1);
+
+				checkReservation();
+				STMRTS.stmReturn(true)
+			}
+		};
+	}
+
+	public STM<Boolean> reservation_cancel(){
+
+		return new STMDO{
+			Integer aux_numUsed <- this.getNumUsed();
+
+			if(1 > aux_numUsed){
+				STMRTS.stmReturn(false)
+			}
+			else{
+				this.setNumUsed(aux_numUsed-1);
+				Integer add_numFree <- this.getNumFree();
+				this.setNumFree(add_numFree+1);
+
+				checkReservation();
+				STMRTS.stmReturn(true)
+			}
+		};
+	}
+
+  	public STM<Boolean> reservation_updatePrice(Integer newPrice){
+  		return new STMDO{
+  			if(0 > newPrice){
+  				STMRTS.stmReturn(false)
+  			}
+  			else{
+  				this.setPrice(newPrice);
+  				checkReservation();
+  				STMRTS.stmReturn(true)
+  			}
+  		};
+  	}
+
+  	public STM<Integer> reservation_compare(Reservation bPtr){
+  		return new STMDO{
+  			Integer aPtr_Id <- this.getId();
+  			Integer bPtr_Id <- bPtr.getId();
+
+  			STMRTS.stmReturn(aPtr_Id-bPtr_Id)
+  		};
+  	}
+
+  	public STM<Integer> reservation_hash(){
+  		return new STMDO{
+  			Integer Id <- this.getId();
+
+  			 STMRTS.stmReturn(Id)
+  		};
+  	}
+}

@@ -1,0 +1,51 @@
+package test.VACATION;
+import stm.*;
+
+class Customer extends TCustomer{
+
+	public Customer(Integer id){
+		super(id);
+	}
+
+	public STM<Integer> customer_compare(TCustomer aPtr, TCustomer bPtr){
+		return new STMDO{
+			Integer aPtr_id <- aPtr.getId();
+			Integer bPtr_id <- bPtr.getId();
+			STMRTS.stmReturn(aPtr_id - bPtr_id)
+		};
+	}
+
+	public STM<Boolean> customer_addReservationInfo(Integer id, Integer type, Integer price){
+		return new STMDO{
+			LinkedList list <- this.getReservationInfoListPtr();
+			Reservation_Info obj <- STMRTS.stmReturn(new Reservation_Info(id, type, price));
+			
+			list.insert(obj)
+			//como tem q retornar boolean, afirmando q foi add e azar
+			//STMRTS.stmReturn(true)	
+		};
+	}
+
+	public STM<Boolean> customer_removeReservationInfo(Integer id, Integer type){
+		return new STMDO{ 
+			LinkedList list <- this.getReservationInfoListPtr();
+			Reservation_Info obj <- STMRTS.stmReturn(new Reservation_Info(id, type, 0));
+			Reservation_Info find <- list.find(obj);
+			if(find == null){
+				STMRTS.stmReturn(false)//nao achou elemento
+			}
+			else{
+				Boolean status <- list.remove(obj);
+				STMRTS.stmReturn(true)//achou e foi removido
+			}
+		};
+	}
+	
+	public STM<Integer> customer_getBill() {
+		return new STMDO{
+			LinkedList list <- this.getReservationInfoListPtr();
+			list.getBill()
+		};
+	}
+
+}

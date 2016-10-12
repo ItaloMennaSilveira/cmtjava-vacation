@@ -1,0 +1,17 @@
+package test.VACATION;
+import stm.*;
+
+public class TReservation_Info implements TObject
+{
+	private Integer id;
+	private Integer type;
+	private Integer price;
+	
+	public TReservation_Info(Integer id, Integer type, Integer price) 
+	{
+		this.id = id;
+		this.type = type;
+		this.price = price;
+	}
+
+}

@@ -1,0 +1,17 @@
+package test.VACATION;
+
+import stm.*;
+
+class Node implements TObject{
+
+	private Reservation_Info element;
+	private Node next;
+	private Node previous;
+
+	Node(Reservation_Info element, Node next, Node previous) {
+		this.element = element;
+		this.next = next;
+		this.previous = previous;
+	}
+}
+

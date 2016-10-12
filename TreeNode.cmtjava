@@ -1,0 +1,40 @@
+package test.VACATION;
+import stm.*;
+
+enum Color { RED, BLACK }
+
+public class TreeNode<E> implements TObject{
+
+	private Integer key;
+ 	private E object;
+    private TreeNode<E> parent;    
+    private TreeNode<E>  left;    
+    private TreeNode<E>  right;     
+    private Color color;      
+
+    protected TreeNode(){
+		key = null;
+		object = null;
+		parent = null;
+		left = right = this;
+		color = Color.BLACK; 
+ }
+    
+    protected TreeNode(Integer k, E obj){
+		key = k; 
+		object = obj;
+		parent = null;
+		left = right = this;
+		color = Color.BLACK;  
+    }
+
+   protected TreeNode(Integer k, E obj, TreeNode parent, TreeNode left, TreeNode right){
+		this.key = k;
+		this.object = obj;
+		this.parent = parent;
+		this.left = left;
+		this.right = right;
+		color = Color.BLACK; 
+    }
+
+}

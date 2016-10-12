@@ -1,0 +1,15 @@
+package test.VACATION;
+import stm.*;
+
+class TLinkedList implements TObject{
+
+	private Node head;
+	private Integer bill;
+  	private Integer size;
+
+	TLinkedList() {
+		head = null;
+    	size = 0;
+    	bill = 0;
+	}
+}

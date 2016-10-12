@@ -1,0 +1,464 @@
+package test.VACATION;
+import stm.*;
+
+public class Manager extends TManager{
+
+	public STM<Boolean> addReservation(RedBlackTree<Reservation> tablePtr, Integer id, Integer num, Integer price){
+		return new STMDO{
+
+			TreeNode<Reservation> node <- tablePtr.locateTree(tablePtr, id);
+			Reservation reservationPtr1 <- node.getObject();
+			if(reservationPtr1 == null)
+			{//cria novo
+				if(1>num || 0>price){
+					STMRTS.stmReturn(false)
+				}
+				else{
+					Reservation reservationPtr2 <- STMRTS.stmReturn (new Reservation(id, num, price));
+					Boolean test2 <- tablePtr.insertTree(reservationPtr2, id);
+					STMRTS.stmReturn(true)
+				}
+			}
+			else {
+				Integer aux_id <- reservationPtr1.getId();
+				Boolean addToTotal <- reservationPtr1.reservation_addToTotal(num);
+				if(!addToTotal){
+					STMRTS.stmReturn(false)
+				}
+				else{ 
+					Integer numTotal <- reservationPtr1.getNumTotal();
+					if(numTotal == 0){
+						Boolean status <- tablePtr.removeTree(id);
+						STMRTS.stmReturn(true)
+					}
+					else{
+						reservationPtr1.reservation_updatePrice(price);
+						STMRTS.stmReturn(true)
+					}
+				}
+			}
+		};
+	}
+
+	public STM<Boolean> manager_addCar(Integer carId, Integer numCars, Integer price){
+		return new STMDO{
+			RedBlackTree t <- this.getCarTablePtr();
+			addReservation(t , carId, numCars, price)
+		};
+	}
+
+	public STM<Boolean> manager_deleteCar(Integer carId, Integer numCar){
+		return new STMDO{
+			RedBlackTree<Reservation> t <- this.getCarTablePtr();
+			addReservation(t , carId, -numCar, -1)
+		};
+	}
+
+	public STM<Boolean> manager_addRoom(Integer roomId, Integer numRoom, Integer price){
+		return new STMDO{
+			RedBlackTree t <- this.getRoomTablePtr();
+			addReservation(t , roomId, numRoom, price)
+		};
+	}
+
+	public STM<Boolean> manager_deleteRoom(Integer roomId, Integer numRoom){
+		return new STMDO{
+			RedBlackTree t <- this.getRoomTablePtr();
+			addReservation(t , roomId, -numRoom, -1)
+		};
+	}
+
+	public STM<Boolean> manager_addFlight(Integer flightId, Integer numSeat, Integer price){
+		return new STMDO{
+			RedBlackTree t <- this.getFlightTablePtr();
+			addReservation(t , flightId, numSeat, price)
+		};
+	}
+
+	public STM<Boolean> manager_deleteFlight(Integer flightId){
+		return new STMDO{
+			RedBlackTree<Reservation> t <- this.getFlightTablePtr();
+			TreeNode root <- t.getRoot();
+			TreeNode node <- t.locateTree(t, flightId);
+			Reservation reservationPtr1 <- node.getObject();
+
+			if(reservationPtr1 == null){
+				STMRTS.stmReturn(false)
+			}
+			else{
+				Integer numUsed <- reservationPtr1.getNumUsed();
+				if(numUsed > 0){
+					STMRTS.stmReturn(false)
+				}
+				else{
+					Integer numTotal <- reservationPtr1.getNumTotal();
+					addReservation(t, flightId, -numTotal, -1)
+				}
+			}
+		};
+	}
+
+	public STM<Boolean> manager_addCustomer(Integer customerId){
+		return new STMDO{
+			RedBlackTree<Customer> t <- this.getCustomerTablePtr();
+			TreeNode root <- t.getRoot();
+			TreeNode node <- t.locateTree(t, customerId);
+			
+			if(node == null){
+				STMRTS.stmReturn(false)
+			}
+			else{
+				Customer cus <- STMRTS.stmReturn(new Customer(customerId));
+				t.insertTree(cus, customerId)
+			}
+		};
+	}
+
+	public STM<Boolean> manager_deleteCustomer(Integer customerId){
+		return new STMDO{
+			RedBlackTree<Customer> customerTree <- this.getCustomerTablePtr();
+			TreeNode customerNode <- customerTree.locateTree(customerTree, customerId);
+			Customer customer <- customerNode.getObject();
+			if(customer==null){
+				STMRTS.stmReturn(false)
+			}
+			else{
+				LinkedList listCustomer <- customer.getReservationInfoListPtr();
+				Node head <- listCustomer.getHead();
+				if(head==null){
+					Boolean status <- customerTree.removeTree(customerId);
+					STMRTS.stmReturn(true)
+				}
+				else{
+					Reservation_Info reservationInfo <- head.getElement();
+					manager_deleteCustomer( head, reservationInfo, customerId , customerTree )
+				}
+			}
+		};
+	}
+
+	public STM<Boolean> manager_deleteCustomer(Node head, Reservation_Info element, Integer customerId, RedBlackTree customerTree){
+		return new STMDO{
+			if(element==null){
+				Boolean status <- customerTree.removeTree(customerId);
+				STMRTS.stmReturn(true)
+			} 
+			else{
+				Integer reservationInfo_Type <- element.getType();
+				//car 
+				if(reservationInfo_Type == 0){
+					RedBlackTree carTree <- this.getCarTablePtr();
+					Integer reservationInfoCar_Id <- element.getId();
+					TreeNode treeNodeCar <- carTree.locateTree(carTree, reservationInfoCar_Id);
+					Reservation reservationCarPtr <- treeNodeCar.getObject();
+					if(reservationCarPtr==null)
+					{
+						Node next <- head.getNext();
+						if(next==null){
+							Boolean status1 <- customerTree.removeTree(customerId);
+							STMRTS.stmReturn(true)
+						}
+						else{
+							Reservation_Info nextReservationInfo <- next.getElement();
+							manager_deleteCustomer( next, nextReservationInfo, customerId, customerTree )
+						}	
+					} 
+					else{
+						Boolean statusCar <- reservationCarPtr.reservation_cancel();
+						Node next <- head.getNext();
+						if(next==null){
+							Boolean status1 <- customerTree.removeTree(customerId);
+							STMRTS.stmReturn(true)
+						}
+						else{
+							Reservation_Info nextReservationInfo <- next.getElement();
+							manager_deleteCustomer( next, nextReservationInfo, customerId, customerTree )
+						}	
+					}
+				}
+				else{
+					if(reservationInfo_Type == 1){
+						RedBlackTree flightTree <- this.getFlightTablePtr();
+						Integer reservationInfoFlight_Id <- element.getId();
+						TreeNode treeNodeFlight <- flightTree.locateTree(flightTree, reservationInfoFlight_Id);
+						Reservation reservationFlightPtr <- treeNodeFlight.getObject();
+						if(reservationFlightPtr==null){
+							Node next1 <- head.getNext();
+							if(next1==null){
+								Boolean status1 <- customerTree.removeTree(customerId);
+								STMRTS.stmReturn(true)
+							}
+							else{
+								Reservation_Info nextReservationInfo1 <- next1.getElement();
+								manager_deleteCustomer( next1, nextReservationInfo1, customerId, customerTree )
+							}	
+						} 
+						else{
+							Boolean statusFlight <- reservationFlightPtr.reservation_cancel();
+							Node next1 <- head.getNext();
+							if(next1==null){
+								Boolean status1 <- customerTree.removeTree(customerId);
+								STMRTS.stmReturn(true)
+							}
+							else{
+								Reservation_Info nextReservationInfo1 <- next1.getElement();
+								manager_deleteCustomer( next1, nextReservationInfo1, customerId, customerTree )
+							}	
+						}
+					}
+					else{
+						RedBlackTree roomTree <- this.getRoomTablePtr();
+						Integer reservationInfoRoom_Id <- element.getId();
+						TreeNode treeNodeRoom <- roomTree.locateTree(roomTree, reservationInfoRoom_Id);
+						Reservation reservationRoomPtr <- treeNodeRoom.getObject();
+						if(reservationRoomPtr==null){
+							Node next2 <- head.getNext();
+							if(next2==null){
+								Boolean status1 <- customerTree.removeTree(customerId);
+								STMRTS.stmReturn(true)
+							}
+							else{
+								Reservation_Info nextReservationInfo2 <- next2.getElement();
+								manager_deleteCustomer( next2, nextReservationInfo2, customerId, customerTree )
+							}	
+						} 
+						else{
+							Boolean statusRoom <- reservationRoomPtr.reservation_cancel();
+							Node next2 <- head.getNext();
+							if(next2==null){
+								Boolean status1 <- customerTree.removeTree(customerId);
+								STMRTS.stmReturn(true)
+							}
+							else{
+								Reservation_Info nextReservationInfo2 <- next2.getElement();
+								manager_deleteCustomer( next2, nextReservationInfo2, customerId, customerTree )
+							}	
+						}
+					}
+				}
+			}
+		};
+	}
+
+
+	public STM<Integer> queryNumFree(RedBlackTree tablePtr, Integer id){
+		return new STMDO{
+			TreeNode node <- tablePtr.locateTree(tablePtr, id);
+			Reservation reservationPtr <- node.getObject();
+
+			if(reservationPtr != null){
+				Integer numFreeAux <- reservationPtr.getNumFree();
+				STMRTS.stmReturn(numFreeAux)
+			}
+			else{
+				STMRTS.stmReturn(-1)
+			}
+
+		};
+	}
+
+	public STM<Integer> queryPrice(RedBlackTree tablePtr, Integer id){
+		return new STMDO{
+			TreeNode node <- tablePtr.locateTree(tablePtr, id);
+			Reservation reservationPtr <- node.getObject();
+
+			if(reservationPtr != null){
+				Integer numPriceAux <- reservationPtr.getPrice();
+				STMRTS.stmReturn(numPriceAux)
+			}
+			else{
+				STMRTS.stmReturn(-1)
+			}
+
+		};
+	}
+
+	public STM<Integer> manager_queryCar(Integer carId){
+		return new STMDO{
+			RedBlackTree carTree <- this.getCarTablePtr();
+			queryNumFree(carTree, carId)
+		};
+	}
+
+	public STM<Integer> manager_queryCarPrice(Integer carId){
+		return new STMDO{
+			RedBlackTree carTree <- this.getCarTablePtr();
+			queryPrice(carTree, carId)
+		};
+	}
+	
+	public STM<Integer> manager_queryRoom(Integer roomId){
+		return new STMDO{
+			RedBlackTree roomTree <- this.getRoomTablePtr();
+			queryNumFree(roomTree, roomId)
+		};
+	}
+
+	public STM<Integer> manager_queryRoomPrice(Integer roomId){
+		return new STMDO{
+			RedBlackTree roomTree <- this.getRoomTablePtr();
+			queryPrice(roomTree, roomId)
+		};
+	}
+
+	public STM<Integer> manager_queryFlight(Integer flightId){
+		return new STMDO{
+			RedBlackTree flightTree <- this.getFlightTablePtr();
+			queryNumFree(flightTree, flightId)
+		};
+	}
+
+	public STM<Integer> manager_queryFlightPrice(Integer flightId){
+		return new STMDO{
+			RedBlackTree flightTree <- this.getFlightTablePtr();
+			queryPrice(flightTree, flightId)
+		};
+	}
+	
+	public STM<Integer> manager_queryCustomerBill(Integer customerId){
+		return new STMDO{
+			RedBlackTree t <- this.getCustomerTablePtr();
+			TreeNode node <- t.locateTree(t, customerId);
+			Customer customer <- node.getObject();
+
+			if(customer != null){
+				Integer bill <- customer.customer_getBill();
+				STMRTS.stmReturn(bill)
+			}
+			else{
+				STMRTS.stmReturn(-1)
+			}
+		};
+	}
+
+	public STM<Boolean> reserve(RedBlackTree tablePtr, RedBlackTree customerTree, Integer customerId, Integer id, Integer type){
+		
+		return new STMDO{
+			TreeNode customerNode <- customerTree.locateTree(customerTree, customerId);
+			Customer customer <- customerNode.getObject();
+
+			if(customer == null){
+				STMRTS.stmReturn(false)
+			}
+			else{
+				TreeNode node <- tablePtr.locateTree(tablePtr,id);
+				Reservation reservationPtr <- node.getObject();
+
+				if(reservationPtr == null){
+					STMRTS.stmReturn(false)
+				}
+				else{
+					Boolean reservationMake <- reservationPtr.reservation_make();
+					if(!reservationMake){
+						STMRTS.stmReturn(false)
+					}
+					else{
+						Integer price <- reservationPtr.getPrice();
+						Boolean reservationInfoAdd <- customer.customer_addReservationInfo(id, type, price);
+						if(!reservationInfoAdd){
+							Boolean reservationCancel <- reservationPtr.reservation_cancel();
+							STMRTS.stmReturn(false)
+						}
+						else{
+							STMRTS.stmReturn(true)
+						}
+					}
+				}
+			}
+		};
+	}
+
+	public STM<Boolean> manager_reserveCar(Integer customerId, Integer carId){
+		return new STMDO{
+			RedBlackTree customerTree <- this.getCustomerTablePtr();
+			RedBlackTree carTree <- this.getCarTablePtr();
+			reserve(carTree, customerTree, customerId, carId, 0 )
+		};
+	}
+
+	public STM<Boolean> manager_reserveFlight(Integer customerId, Integer flightId){
+		return new STMDO{
+			RedBlackTree customerTree <- this.getCustomerTablePtr();
+			RedBlackTree flightTree <- this.getFlightTablePtr();
+			reserve(flightTree, customerTree, customerId, flightId, 1 )
+		};
+	}
+
+	public STM<Boolean> manager_reserveRoom(Integer customerId, Integer roomId){
+		return new STMDO{
+			RedBlackTree customerTree <- this.getCustomerTablePtr();
+			RedBlackTree roomTree <- this.getRoomTablePtr();
+			reserve(roomTree, customerTree, customerId, roomId, 2 )
+		};
+	}
+	
+	public STM<Boolean> cancel(RedBlackTree tablePtr, RedBlackTree customerTree, Integer customerId, Integer id, Integer type){
+		return new STMDO{
+			TreeNode customerNode <- customerTree.locateTree(customerTree, customerId);
+			Customer customer <- customerNode.getObject();
+
+			if(customer == null){
+				STMRTS.stmReturn(false)
+			}
+			else{
+				TreeNode node <- tablePtr.locateTree(tablePtr,id);
+				Reservation reservationPtr <- node.getObject();
+
+				if(reservationPtr == null){
+					STMRTS.stmReturn(false)
+				}
+				else{
+					Boolean reservationCancel <- reservationPtr.reservation_cancel();
+					if(!reservationCancel){
+						STMRTS.stmReturn(false)
+					}
+					else{
+						Boolean reservationInfoRemove <- customer.customer_removeReservationInfo(id, type);
+						if(!reservationInfoRemove){
+							Boolean reservationMake <- reservationPtr.reservation_make();
+							STMRTS.stmReturn(false)
+						}
+						else{
+							STMRTS.stmReturn(true)
+						}
+					}
+				}
+			}
+		};
+	}
+
+	public STM<Boolean> manager_cancelCar(Integer customerId, Integer carId){
+		return new STMDO{
+			RedBlackTree customerTree <- this.getCustomerTablePtr();
+			RedBlackTree carTree <- this.getCarTablePtr();
+			cancel(carTree, customerTree, customerId, carId, 0 )
+		};
+	}
+
+	public STM<Boolean> manager_cancelFlight(Integer customerId, Integer flightId){
+		return new STMDO{
+			RedBlackTree customerTree <- this.getCustomerTablePtr();
+			RedBlackTree flightTree <- this.getFlightTablePtr();
+			cancel(flightTree, customerTree, customerId, flightId, 1 )
+		};
+	}
+
+	public STM<Boolean> manager_cancelRoom(Integer customerId, Integer roomId){
+		return new STMDO{
+			RedBlackTree customerTree <- this.getCustomerTablePtr();
+			RedBlackTree roomTree <- this.getRoomTablePtr();
+			cancel(roomTree, customerTree, customerId, roomId, 2 )
+		};
+	}
+
+/*	public STM<Boolean> manager_teste(){	
+		return new STMDO{
+			RedBlackTree customerTree <- this.getCustomerTablePtr();
+			RedBlackTree roomTree <- this.getRoomTablePtr();
+			if(roomTree==null){
+				STMRTS.stmReturn(false)
+			}
+			STMRTS.stmReturn(true)
+		};
+	}*/
+}

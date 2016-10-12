@@ -1,0 +1,14 @@
+package test.VACATION;
+import stm.*;
+
+public class TRedBlackTree<E> implements TObject{
+	private TreeNode<E> root;
+	private TreeNode<E> EMPTY;
+	private Integer compID;
+
+	public TRedBlackTree(){
+		EMPTY = new TreeNode();
+		root = EMPTY;
+		compID= null;
+	}
+}

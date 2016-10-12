@@ -1,0 +1,13 @@
+package test.VACATION;
+import stm.*;
+
+class TCustomer implements TObject{
+
+	private Integer id;
+	private LinkedList reservationInfoListPtr;
+
+	public TCustomer(Integer id){
+		this.id = id;
+		this.reservationInfoListPtr = new LinkedList();
+	}
+}

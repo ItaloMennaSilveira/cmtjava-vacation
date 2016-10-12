@@ -1,0 +1,318 @@
+package test.VACATION;
+import stm.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+class Client extends Thread{
+
+	int id;
+	Manager managerPtr;
+	Random randomPtr;
+	int numOperation;
+	int numQueryPerTransaction;
+	int queryRange;
+	int percentUser; 
+	
+	public Client(int id,
+		Manager managerPtr,
+		int numOperation,
+		int numQueryPerTransaction,
+		int queryRange,
+		int percentUser) 
+	{
+		this.randomPtr = new Random();
+		this.randomPtr.random_alloc();
+		this.id=id;
+		this.managerPtr = managerPtr;
+		randomPtr.random_seed(id);
+		this.numOperation = numOperation;
+		this.numQueryPerTransaction = numQueryPerTransaction;
+		this.queryRange = queryRange;
+		this.percentUser = percentUser;
+	}
+
+	public int selectAction (int r, int percentUser) {
+		if (r < percentUser) {
+			return Defines.ACTION_MAKE_RESERVATION;
+		} else if ((r & 1)==1) {
+			return Defines.ACTION_DELETE_CUSTOMER;
+		} else {
+			return Defines.ACTION_UPDATE_TABLES;
+		}
+	}
+
+	public void run(){
+		int myId = id;
+
+		Manager managerPtr = this.managerPtr;
+		Random randomPtr  = this.randomPtr;
+
+		int numOperation           = this.numOperation;
+		int numQueryPerTransaction = this.numQueryPerTransaction;
+		int queryRange             = this.queryRange;
+		int percentUser            = this.percentUser;
+
+		int types[]  = new int[numQueryPerTransaction];
+		int ids[]    = new int[numQueryPerTransaction];
+		int ops[]    = new int[numQueryPerTransaction];
+		int prices[] = new int[numQueryPerTransaction];
+		Integer cont = 0;
+
+		for (int i = 0; i < numOperation; i++) {
+			int r = randomPtr.posrandom_generate() % 100;
+			int action = selectAction(r, percentUser);
+
+
+			if(action==Defines.ACTION_MAKE_RESERVATION) 
+			{
+				int maxPrices[]=new int[Defines.NUM_RESERVATION_TYPE];
+				int maxIds[]=new int[Defines.NUM_RESERVATION_TYPE];
+				maxPrices[0]=-1;
+				maxPrices[1]=-1;
+				maxPrices[2]=-1;
+				maxIds[0]=-1;
+				maxIds[1]=-1;
+				maxIds[2]=-1;
+				int n;
+				Integer numQuery = (Integer) randomPtr.posrandom_generate() % numQueryPerTransaction + 1;
+				Integer customerId = (Integer) randomPtr.posrandom_generate() % queryRange + 1;
+				for (n = 0; n < numQuery; n++) 
+				{
+					types[n] = randomPtr.random_generate() % Defines.NUM_RESERVATION_TYPE;
+					ids[n] = (randomPtr.random_generate() % queryRange) + 1;
+				}
+				boolean isFound = false;
+
+				STMRTS.atomic(atomic1(managerPtr, types, ids, maxPrices, maxIds, numQuery, customerId, isFound, cont));
+			} 
+
+			else if (action==Defines.ACTION_DELETE_CUSTOMER) 
+			{
+				Integer customerId = (Integer) randomPtr.posrandom_generate() % queryRange + 1;
+				STMRTS.atomic(atomic2(managerPtr, customerId));
+			} 
+			else if (action==Defines.ACTION_UPDATE_TABLES) 
+			{
+				Integer numUpdate = (Integer) randomPtr.posrandom_generate() % numQueryPerTransaction + 1;
+				int n;
+				for (n = 0; n < numUpdate; n++) 
+				{
+					types[n] = randomPtr.posrandom_generate() % Defines.NUM_RESERVATION_TYPE;
+					ids[n] = (randomPtr.posrandom_generate() % queryRange) + 1;
+					ops[n] = randomPtr.posrandom_generate() % 2;
+					if (ops[n]==1) 
+					{
+						prices[n] = ((randomPtr.posrandom_generate() % 5) * 10) + 50;
+					}
+				}
+				STMRTS.atomic(atomic3(managerPtr, types, ids, ops, prices, numUpdate, cont));
+			}
+		}
+	}
+	
+	public STM<stm.Void> atomic1(Manager managerPtr, int[] types, int[] ids,
+		int[] maxPrices, int[] maxIds, Integer numQueryInteger, Integer customerIdInteger,
+		Boolean isFound, Integer n){
+		return new STMDO{
+			if(numQueryInteger==n){
+				int zero <- STMRTS.stmReturn(0);
+				int one <- STMRTS.stmReturn(1);
+				int two <- STMRTS.stmReturn(2);
+				if(isFound){
+					Boolean addCustomer <- managerPtr.manager_addCustomer(customerIdInteger);
+					int maxIds0 <- STMRTS.stmReturn(maxIds[zero]);
+					if(maxIds0>0){
+						Boolean reserveCar <- managerPtr.manager_reserveCar(customerIdInteger,maxIds0);
+						int maxIds1 <- STMRTS.stmReturn(maxIds[one]);
+						if(maxIds1>0){
+							Boolean reserveFlight <- managerPtr.manager_reserveFlight(customerIdInteger,maxIds1);
+							int maxIds2 <- STMRTS.stmReturn(maxIds[two]);
+							if(maxIds2>0){
+								Boolean reserveRoom <- managerPtr.manager_reserveRoom(customerIdInteger,maxIds2);
+								STMRTS.stmReturn(new stm.Void())
+							}
+							else{
+								STMRTS.stmReturn(new stm.Void())
+							}
+						}
+						else{
+							int maxIds2 <- STMRTS.stmReturn(maxIds[two]);
+							if(maxIds2>0){
+								Boolean reserveRoom <- managerPtr.manager_reserveRoom(customerIdInteger,maxIds2);
+								STMRTS.stmReturn(new stm.Void())
+							}
+							else{
+								STMRTS.stmReturn(new stm.Void())
+							}
+						}
+					}
+					else{
+						int maxIds1 <- STMRTS.stmReturn(maxIds[one]);
+						if(maxIds1>0){
+							Boolean reserveFlight <- managerPtr.manager_reserveFlight(customerIdInteger,maxIds1);
+							int maxIds2 <- STMRTS.stmReturn(maxIds[two]);
+							if(maxIds2>0){
+								Boolean reserveRoom <- managerPtr.manager_reserveRoom(customerIdInteger,maxIds2);
+								STMRTS.stmReturn(new stm.Void())
+							}
+							else{
+								STMRTS.stmReturn(new stm.Void())
+							}
+						}
+						else{
+							int maxIds2 <- STMRTS.stmReturn(maxIds[two]);
+							if(maxIds2>0){
+								Boolean reserveRoom <- managerPtr.manager_reserveRoom(customerIdInteger,maxIds2);
+								STMRTS.stmReturn(new stm.Void())
+							}
+							else{
+								STMRTS.stmReturn(new stm.Void())
+							}
+						}
+					}
+				}
+				else{
+					STMRTS.stmReturn(new stm.Void())
+				}
+			}
+			//-------------------------------------------------------
+			//LAÇO DOS TESTES
+			else{//--------------------------------------------------
+				int t <- STMRTS.stmReturn(types[n]);
+				int id <- STMRTS.stmReturn(ids[n]);
+				int price <- STMRTS.stmReturn(-1);
+				if(t==0){
+					Integer test_car <- managerPtr.manager_queryCar(id);
+					if(test_car >= 0){
+						Integer price <- managerPtr.manager_queryCarPrice(id);
+						Integer maxPrice <- STMRTS.stmReturn(maxPrices[t]);
+						if(price > maxPrice){
+							STMRTS.stmReturn(maxPrices[t] = price);
+							STMRTS.stmReturn(maxIds[t] = id);
+							Boolean isFound <- STMRTS.stmReturn(true);
+							atomic1(managerPtr, types, ids, maxPrices, maxIds, numQueryInteger,
+								customerIdInteger, isFound, n+1)
+						}
+						else{
+							atomic1(managerPtr, types, ids, maxPrices, maxIds, numQueryInteger,
+								customerIdInteger, isFound, n+1)
+						}
+					}
+					else{
+						atomic1(managerPtr, types, ids, maxPrices, maxIds, numQueryInteger,
+							customerIdInteger, isFound, n+1)
+					}
+				}
+				else{
+					if(t==1){
+						Integer test_flight <- managerPtr.manager_queryFlight(id);
+						if(test_flight >= 0){
+							Integer price <- managerPtr.manager_queryFlightPrice(id);
+							Integer maxPrice <- STMRTS.stmReturn(maxPrices[t]);
+							if(price > maxPrice){
+								STMRTS.stmReturn(maxPrices[t] = price);
+								STMRTS.stmReturn(maxIds[t] = id);
+								Boolean isFound <- STMRTS.stmReturn(true);
+								atomic1(managerPtr, types, ids, maxPrices, maxIds, numQueryInteger,
+									customerIdInteger, isFound, n+1)
+							}
+							else{
+								atomic1(managerPtr, types, ids, maxPrices, maxIds, numQueryInteger,
+									customerIdInteger, isFound, n+1)
+							}
+						}
+						else{
+							atomic1(managerPtr, types, ids, maxPrices, maxIds, numQueryInteger,
+								customerIdInteger, isFound, n+1)
+						}
+					}
+					else{
+						Integer test_room <- managerPtr.manager_queryRoom(id);
+						if( test_room >= 0){
+							Integer price <- managerPtr.manager_queryRoomPrice(id);
+							Integer maxPrice <- STMRTS.stmReturn(maxPrices[t]);
+							if(price > maxPrice){
+								STMRTS.stmReturn(maxPrices[t] = price);
+								STMRTS.stmReturn(maxIds[t] = id);
+								Boolean isFound <- STMRTS.stmReturn(true);
+								atomic1(managerPtr, types, ids, maxPrices, maxIds, numQueryInteger,
+									customerIdInteger, isFound, n+1)
+							}
+							else{
+								atomic1(managerPtr, types, ids, maxPrices, maxIds, numQueryInteger,
+									customerIdInteger, isFound, n+1)
+							}
+						}
+						else{
+							atomic1(managerPtr, types, ids, maxPrices, maxIds, numQueryInteger,
+								customerIdInteger, isFound, n+1)
+						}
+					}
+				}
+			}
+		};
+	}
+
+	public STM<stm.Void> atomic2(Manager managerPtr, Integer customerIdInteger){
+		return new STMDO{
+			Integer bill <- managerPtr.manager_queryCustomerBill(customerIdInteger);
+			if (bill >= 0) {
+				Boolean deleteCustomer <- managerPtr.manager_deleteCustomer(customerIdInteger);
+				STMRTS.stmReturn(new stm.Void())
+			}
+			else{
+				STMRTS.stmReturn(new stm.Void())
+			}
+		};
+	}
+
+
+	public STM<stm.Void> atomic3(Manager managerPtr, int[] types, int[] ids,
+		int[] ops, int[] prices, Integer numUpdateInteger, Integer n){
+		return new STMDO{
+			if(numUpdateInteger==n){
+				STMRTS.stmReturn(new stm.Void())
+			}
+			else{
+				int t <- STMRTS.stmReturn(types[n]);
+				int id <- STMRTS.stmReturn(ids[n]);
+				int doAdd <- STMRTS.stmReturn(ops[n]);
+				if(doAdd == 1){
+					Integer newPrice <- STMRTS.stmReturn(prices[n]);
+					if(t==0){
+						Boolean addCar <- managerPtr.manager_addCar(id, 100, newPrice);
+						atomic3(managerPtr, types, ids, ops, prices, numUpdateInteger, n+1)
+					}
+					else{
+						if(t==1){
+							Boolean addFlight <- managerPtr.manager_addFlight(id, 100, newPrice);
+							atomic3(managerPtr, types, ids, ops, prices, numUpdateInteger, n+1)
+						}
+						else{
+							Boolean addRoom <- managerPtr.manager_addRoom(id, 100, newPrice);
+							atomic3(managerPtr, types, ids, ops, prices, numUpdateInteger, n+1)
+						}
+					}
+				}
+				else{
+					if(t==0){
+						Boolean addCar <- managerPtr.manager_deleteCar(id, 100);
+						atomic3(managerPtr, types, ids, ops, prices, numUpdateInteger, n+1)
+					}
+					else{
+						if(t==1){
+							Boolean addFlight <- managerPtr.manager_deleteFlight(id);
+							atomic3(managerPtr, types, ids, ops, prices, numUpdateInteger, n+1)
+						}
+						else{
+							Boolean addRoom <- managerPtr.manager_deleteRoom(id, 100);
+							atomic3(managerPtr, types, ids, ops, prices, numUpdateInteger, n+1)
+						}
+					}
+				}
+			}
+		};
+	}
+}
+
+

@@ -1,0 +1,27 @@
+package test.VACATION;
+
+import stm.*;
+
+public class TReservation implements TObject{
+	
+	private Integer id;
+	private Integer numUsed;
+	private Integer numFree;
+	private Integer numTotal;
+	private Integer price;
+
+	public TReservation(){
+		this.id=null;
+		this.numUsed=null;
+		this.numTotal=null;
+		this.numFree=null;
+		this.price=null;
+	}
+	public TReservation(Integer id, Integer numTotal, Integer price) {
+		this.id = id;
+		this.numUsed = 0;
+		this.numFree = numTotal;
+		this.numTotal = numTotal;
+		this.price = price;
+	}
+}

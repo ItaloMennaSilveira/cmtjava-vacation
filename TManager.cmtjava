@@ -1,0 +1,18 @@
+package test.VACATION;
+import stm.*;
+
+public class TManager implements TObject{
+
+	private RedBlackTree<Reservation> carTablePtr;
+	private RedBlackTree<Reservation> roomTablePtr;
+	private RedBlackTree<Reservation> flightTablePtr;
+	private RedBlackTree<Customer> customerTablePtr;
+
+	TManager()
+	{
+		carTablePtr = new RedBlackTree();
+		roomTablePtr = new RedBlackTree();
+		flightTablePtr = new RedBlackTree();
+		customerTablePtr = new RedBlackTree();
+	}
+}
